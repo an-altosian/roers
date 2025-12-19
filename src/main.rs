@@ -5,7 +5,7 @@ use tracing_subscriber::{filter::LevelFilter, fmt, prelude::*, EnvFilter};
 #[global_allocator]
 static PEAK_ALLOC: PeakAlloc = PeakAlloc;
 
-use clap::{command, Parser, Subcommand};
+use clap::{Parser, Subcommand};
 
 #[derive(Debug, Subcommand)]
 pub enum Commands {

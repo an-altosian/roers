@@ -582,13 +582,13 @@ pub fn make_ref(aug_ref_opts: AugRefOpts) -> anyhow::Result<()> {
                 }
                 AugType::TranscriptBody => {
                     // we get the range (transcript body) of each transcript
-                    let mut tx_gr = exon_gr.transcripts(None, false)?;
+                    let mut tx_gr = exon_gr.transcripts(None, Some(&[gene_id]), false)?;
 
                     // Then we append a -T to mark the sequence as transcript body
                     tx_gr.df = tx_gr
                         .df
                         .lazy()
-                        .with_column(col(gene_id).add(lit("-T")).alias("t2g_tx_id"))
+                        .with_column(col(transcript_id).add(lit("-T")).alias("t2g_tx_id"))
                         .collect()?;
 
                     // say something
@@ -598,7 +598,7 @@ pub fn make_ref(aug_ref_opts: AugRefOpts) -> anyhow::Result<()> {
                         &genome_path,
                         &fa_out_file,
                         false,
-                        Some(gene_id),
+                        Some("t2g_tx_id"),
                         options::OOBOption::Truncate,
                         &mut sd_callback,
                     )?;
@@ -630,10 +630,11 @@ pub fn make_ref(aug_ref_opts: AugRefOpts) -> anyhow::Result<()> {
         // create extra file reader
         let mut reader = std::fs::File::open(path)
             .map(std::io::BufReader::new)
-            .map(noodles::fasta::Reader::new)?;
+            .map(noodles::fasta::io::Reader::new)?;
 
         // we crate the writer, and write if not dedup
-        let mut writer = noodles::fasta::Writer::new(&fa_out_file);
+        let mut writer = noodles::fasta::io::writer::Builder::default()
+            .build_from_writer(&fa_out_file);
 
         // if dedup, we push the records into the seq vector
         // otherwise, we write the records to the output file
@@ -687,9 +688,10 @@ pub fn make_ref(aug_ref_opts: AugRefOpts) -> anyhow::Result<()> {
         // create extra file reader
         let mut reader = std::fs::File::open(path)
             .map(std::io::BufReader::new)
-            .map(noodles::fasta::Reader::new)?;
+            .map(noodles::fasta::io::Reader::new)?;
 
-        let mut writer = noodles::fasta::Writer::new(&fa_out_file);
+        let mut writer = noodles::fasta::io::writer::Builder::default()
+            .build_from_writer(&fa_out_file);
 
         let mut names = Vec::new();
         for result in reader.records() {
@@ -762,6 +764,7 @@ pub fn make_ref(aug_ref_opts: AugRefOpts) -> anyhow::Result<()> {
         let mask = is_in(
             column.as_materialized_series(),
             &Series::new("values".into(), dups),
+            false,
         )?;
 
         // replace the t2g_map dataframe with the one that has the
